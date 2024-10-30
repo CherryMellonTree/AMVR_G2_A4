@@ -4,7 +4,7 @@ import cv2
 CACHED_REF_PTS = None
 
 
-def find_and_warp(frame, source, cornerIDs, arucoDict, arucoParams,
+def find_and_warp(frame, source, detector, cornerIDs, arucoDict, arucoParams,
 	useCache=False):
 	# grab a reference to our cached reference points
 	global CACHED_REF_PTS
@@ -13,8 +13,8 @@ def find_and_warp(frame, source, cornerIDs, arucoDict, arucoParams,
 	(imgH, imgW) = frame.shape[:2]
 	(srcH, srcW) = source.shape[:2]
     # detect AruCo markers in the input frame
-	(corners, ids, rejected) = cv2.aruco.detectMarkers(
-		frame, arucoDict, parameters=arucoParams)
+	(corners, ids, rejected) = detector.detectMarkers(
+		frame, arucoDict)
 	
 	# if we *did not* find our four ArUco markers, initialize an
 	# empty IDs list, otherwise flatten the ID list
