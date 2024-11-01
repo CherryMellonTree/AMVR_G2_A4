@@ -30,9 +30,19 @@ def overlay_image_onto_markers(source_frame, modifying_frame, corners):
         # Create a mask for the overlay
         mask = np.zeros((source_frame.shape[0], source_frame.shape[1]), dtype=np.uint8)
         cv.fillConvexPoly(mask, pts_dst.astype(int), 255)
+
+        # Convert the mask to 3 channels
+        mask_3ch = cv.cvtColor(mask, cv.COLOR_GRAY2BGR)
+
+        # Multiply the warped frame and source frame by the mask
+        warpedMultiplied = cv.multiply(warped_frame.astype("float"), mask_3ch.astype("float") / 255)  # Normalize mask
+        imageMultiplied = cv.multiply(source_frame.astype("float"), (1.0 - mask_3ch.astype("float") / 255))
+
+        # Combine the two results
+        output = cv.add(warpedMultiplied, imageMultiplied)
+        output = output.astype("uint8")
         
-        warped_frame = source_frame + warped_frame
-    return warped_frame
+    return output
 
 def main():
     source_video_path = "./IMG_4010.mp4"
