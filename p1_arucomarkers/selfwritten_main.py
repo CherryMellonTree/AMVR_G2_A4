@@ -4,18 +4,43 @@ import sys
 
 def detect_arucos(frame):
     dictionary = cv.aruco.getPredefinedDictionary(cv.aruco.DICT_4X4_50)
-    parameters = cv.aruco.DetectorParameters_create()
-    
-    corners, ids, rejectedImgPoints = cv.aruco.detectMarkers(frame, dictionary, parameters=parameters)
-    return corners, ids
+    parameters = cv.aruco.DetectorParameters()
+    detector = cv.aruco.ArucoDetector(dictionary, parameters)
+
+    corners, ids, rejectedImgPoints = detector.detectMarkers(frame)
+    if(ids is not None and len(ids) == 4):
+        all_points = np.vstack([corner[0] for corner in corners])
+        centroid = np.mean(all_points, axis=0)
+
+        most_distant_points = []
+        for corner in corners:
+            points = corner[0]  
+
+            distances = np.linalg.norm(points - centroid, axis=1)
+
+            max_dist_index = np.argmax(distances)
+
+            most_distant_points.append(points[max_dist_index])
+        most_distant_points = np.array(most_distant_points)
+
+        i=0
+        cleaned_corners = [0,0,0,0]
+        cleaned_ids = []
+        for i in ids:
+            cleaned_ids.append(i[0])
+        for i in range(len(cleaned_ids)):
+            cleaned_corners[cleaned_ids[i]] = most_distant_points[i]
+
+        return cleaned_corners, ids
+    return [],[]
 
 def overlay_image_onto_markers(source_frame, modifying_frame, corners):
     if len(corners) == 4:
         # Sort corners to maintain the correct order (top-left, top-right, bottom-right, bottom-left)
-        top_left = corners[0][0][0]
-        top_right = corners[1][0][1]
-        bottom_left = corners[2][0][3]
-        bottom_right = corners[3][0][2]
+        top_left = corners[0]
+        top_right = corners[1]
+        bottom_left = corners[2]
+        bottom_right = corners[3]
 
         pts_dst = np.array([top_left, top_right, bottom_right, bottom_left], dtype="float32")
 
@@ -45,6 +70,10 @@ def overlay_image_onto_markers(source_frame, modifying_frame, corners):
     return output
 
 def main():
+    source_video_path = "./input_2.mp4"
+    modifying_video_path = "./filler_2.mp4"
+
+
     source_video_path = "./IMG_4010.mp4"
     modifying_video_path = "./BALLS.mp4"
 
@@ -60,26 +89,23 @@ def main():
     source_height = int(source_video.get(cv.CAP_PROP_FRAME_HEIGHT))
 
     fourcc = cv.VideoWriter_fourcc(*'mp4v')
-    out = cv.VideoWriter('output.mp4', fourcc, fps, (source_width, source_height))
+    out = cv.VideoWriter('output_2.mp4', fourcc, fps, (source_width, source_height))
 
     s_success, source_frame = source_video.read()
     m_success, modifying_frame = modifying_video.read()
 
-    last_valid_corners = []
-    last_valid_ids = []
+    last_corners = []
     while m_success and s_success:
         #detect aruco
         corners, ids = detect_arucos(source_frame)
 
-        #inject second feed
-        all_corners = np.concatenate(corners).reshape(-1, 2)
-        hull = cv.convexHull(all_corners)
-        hull = hull.astype(int)
-
-        cv.polylines(source_frame, [hull], isClosed=True, color=(0, 255, 0), thickness=2)
-        
         if corners is not None and len(corners) == 4:  # Ensure 4 corners are detected
+            last_corners = corners
             source_frame = overlay_image_onto_markers(source_frame, modifying_frame, corners)
+        elif last_corners != []:
+            source_frame = overlay_image_onto_markers(source_frame, modifying_frame, last_corners)
+            last_corners = []
+
             
 
         #add frame to output & get next frame if possible
