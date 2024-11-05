@@ -69,7 +69,7 @@ def overlay_image_onto_markers(source_frame, modifying_frame, corners):
         
     return output
 
-def main():
+def usingVideoFeed():
     source_video_path = "./input_2.mp4"
     modifying_video_path = "./filler_2.mp4"
 
@@ -95,9 +95,13 @@ def main():
     m_success, modifying_frame = modifying_video.read()
 
     last_corners = []
-    while m_success and s_success:
+    while s_success:
         #detect aruco
         corners, ids = detect_arucos(source_frame)
+
+        if not m_success:
+            modifying_video.set(cv.CAP_PROP_POS_FRAMES, 0)  # Reset to the first frame
+            m_success, modifying_frame = modifying_video.read()
 
         if corners is not None and len(corners) == 4:  # Ensure 4 corners are detected
             last_corners = corners
@@ -116,6 +120,53 @@ def main():
     source_video.release()
     modifying_video.release()
     out.release()
+    
+def usingLiveWebcamFeed():
+    modifying_video_path = "./BALLS.mp4"
+    modifying_video = cv.VideoCapture(modifying_video_path)
+
+    # Access the default webcam
+    source_video = cv.VideoCapture(0)
+
+    s_success, source_frame = source_video.read()
+    m_success, modifying_frame = modifying_video.read()
+
+    last_corners = []
+    while s_success:
+        # Detect aruco markers
+        corners, ids = detect_arucos(source_frame)
+        
+        if not m_success:
+            modifying_video.set(cv.CAP_PROP_POS_FRAMES, 0)  # Reset to the first frame
+            m_success, modifying_frame = modifying_video.read()
+
+        if corners is not None and len(corners) == 4:  # Ensure 4 corners are detected
+            last_corners = corners
+            source_frame = overlay_image_onto_markers(source_frame, modifying_frame, corners)
+        elif last_corners != []:
+            source_frame = overlay_image_onto_markers(source_frame, modifying_frame, last_corners)
+            last_corners = []
+
+        cv.imshow("Webcam Feed", source_frame)
+        # Add frame to output & get next frame if possible
+        s_success, source_frame = source_video.read()
+        m_success, modifying_frame = modifying_video.read()
+
+        # Exit on 'q' key press
+        if cv.waitKey(1) & 0xFF == ord('q'):
+            break
+
+    # Release resources
+    source_video.release()
+    modifying_video.release()
+    cv.destroyAllWindows()
+
+def main():
+    #Use for AR using the given video stream
+    #usingVideoFeed()
+    
+    #Use for AR using live webcam feed
+    usingLiveWebcamFeed()
 
 if __name__ == "__main__":
     main()
