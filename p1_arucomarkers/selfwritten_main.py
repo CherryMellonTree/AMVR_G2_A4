@@ -75,7 +75,7 @@ def usingVideoFeed():
 
 
     source_video_path = "./IMG_4010.mp4"
-    modifying_video_path = "./BALLS.mp4"
+    modifying_video_path = "./example_4.mp4"
 
     source_video = cv.VideoCapture(source_video_path)
     modifying_video = cv.VideoCapture(modifying_video_path)
@@ -122,11 +122,19 @@ def usingVideoFeed():
     out.release()
     
 def usingLiveWebcamFeed():
-    modifying_video_path = "./BALLS.mp4"
+    modifying_video_path = "./output_2.mp4"
     modifying_video = cv.VideoCapture(modifying_video_path)
 
     # Access the default webcam
     source_video = cv.VideoCapture(0)
+    fps = int(modifying_video.get(cv.CAP_PROP_FPS))
+    
+
+    source_width = int(source_video.get(cv.CAP_PROP_FRAME_WIDTH))
+    source_height = int(source_video.get(cv.CAP_PROP_FRAME_HEIGHT))
+    
+    fourcc = cv.VideoWriter_fourcc(*'mp4v')
+    out = cv.VideoWriter('output_feed.mp4', fourcc, fps, (source_width, source_height))
 
     s_success, source_frame = source_video.read()
     m_success, modifying_frame = modifying_video.read()
@@ -149,6 +157,8 @@ def usingLiveWebcamFeed():
 
         cv.imshow("Webcam Feed", source_frame)
         # Add frame to output & get next frame if possible
+        out.write(source_frame)
+
         s_success, source_frame = source_video.read()
         m_success, modifying_frame = modifying_video.read()
 
@@ -159,6 +169,8 @@ def usingLiveWebcamFeed():
     # Release resources
     source_video.release()
     modifying_video.release()
+    out.release()
+
     cv.destroyAllWindows()
 
 def main():
